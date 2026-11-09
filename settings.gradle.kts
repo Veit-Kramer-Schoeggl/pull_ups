@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Training Tracker"
+rootProject.name = "pull_ups"
 include(":app")
  

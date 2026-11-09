@@ -65,7 +65,7 @@ Auf dem Emulator getestet (1.0.0 → 1.0.1 → 1.0.2 → 1.0.3, Daten jeweils er
 
 **Erstinstallation (per APK):**
 
-1. Auf dem Handy <https://github.com/Veit-Kramer-Schoeggl/TrainingTracker/releases/latest> öffnen
+1. Auf dem Handy <https://github.com/Veit-Kramer-Schoeggl/pull_ups/releases/latest> öffnen
    und `pullups-<version>.apk` herunterladen.
 2. Die Datei öffnen. Android fragt einmalig, ob der Browser Apps installieren darf: erlauben.
 3. Falls Google Play Protect „App-Scan empfohlen“ zeigt: „App scannen“, dann „Installieren“.

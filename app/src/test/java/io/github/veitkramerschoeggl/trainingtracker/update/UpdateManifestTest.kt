@@ -14,7 +14,7 @@ class UpdateManifestTest {
             {
               "versionCode": 10100,
               "versionName": "1.1.0",
-              "apkUrl": "https://github.com/Veit-Kramer-Schoeggl/TrainingTracker/releases/download/v1.1.0/pullups-1.1.0.apk",
+              "apkUrl": "https://github.com/Veit-Kramer-Schoeggl/pull_ups/releases/download/v1.1.0/pullups-1.1.0.apk",
               "sha256": "ABCDEF0123",
               "minSdk": 34,
               "releaseNotes": "  Neue Statistik  "
