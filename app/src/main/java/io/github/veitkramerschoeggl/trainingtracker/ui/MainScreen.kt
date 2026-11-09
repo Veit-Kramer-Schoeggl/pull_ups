@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -65,6 +70,7 @@ import io.github.veitkramerschoeggl.trainingtracker.ui.theme.Palette
 import io.github.veitkramerschoeggl.trainingtracker.ui.theme.TrainingTrackerTheme
 import io.github.veitkramerschoeggl.trainingtracker.ui.theme.palette
 import io.github.veitkramerschoeggl.trainingtracker.update.UpdateState
+import java.time.YearMonth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -96,6 +102,8 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
     var chartType by rememberSaveable { mutableStateOf(ChartType.BAR) }
     var chartRange by rememberSaveable { mutableStateOf(ChartRange.ALL) }
     var closedWeeks by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var showAllDays by rememberSaveable { mutableStateOf(false) }
+    var openMonth by rememberSaveable { mutableStateOf<String?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelExport.MIME_TYPE)) { uri ->
         if (uri != null) viewModel.export(uri)
@@ -146,10 +154,7 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
 
     Scaffold(
         containerColor = Palette.Background,
-        // Opaque status bar area, so scrolled content does not run under the clock and icons.
-        topBar = {
-            Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(Palette.Background))
-        },
+        topBar = { StickyHeader(accentColor, onSelect = viewModel::setAccent) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(
@@ -158,13 +163,13 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = padding.calculateTopPadding() + 24.dp,
+                top = padding.calculateTopPadding() + 16.dp,
                 bottom = padding.calculateBottomPadding() + 60.dp,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item(key = "header") {
-                Header(accentColor, onSelect = viewModel::setAccent, modifier = Modifier.contentWidth())
+                Text("Pull-ups", modifier = Modifier.contentWidth().padding(bottom = 4.dp), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Palette.White)
             }
             if (showUpdate) {
                 item(key = "update") {
@@ -178,7 +183,13 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
             }
             if (hasData) {
                 item(key = "stats") {
-                    StatsSection(data.stats, statsExpanded, onToggle = { statsExpanded = !statsExpanded }, modifier = Modifier.contentWidth())
+                    StatsSection(
+                        data.stats,
+                        statsExpanded,
+                        onToggle = { statsExpanded = !statsExpanded },
+                        onMonthClick = { openMonth = it.toString() },
+                        modifier = Modifier.contentWidth(),
+                    )
                 }
             }
             item(key = "entry") {
@@ -192,7 +203,7 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
                     onStep = viewModel::stepReps,
                     onSubmit = viewModel::submit,
                     onCancelEdit = viewModel::cancelEdit,
-                    modifier = Modifier.contentWidth().padding(bottom = 24.dp),
+                    modifier = Modifier.contentWidth().padding(bottom = 16.dp),
                 )
             }
             if (hasData) {
@@ -226,7 +237,8 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
                 tab == HistoryTab.DAYS -> {
                     item(key = "days-label") { SectionLabel("Tage", Modifier.contentWidth().padding(bottom = 12.dp)) }
                     val newest = data.days.last().date
-                    items(data.days.asReversed(), key = { "day-${it.date}" }) { day ->
+                    val shown = if (showAllDays) data.days.asReversed() else data.days.takeLast(VISIBLE_DAYS).asReversed()
+                    items(shown, key = { "day-${it.date}" }) { day ->
                         DayItem(
                             day = day,
                             isNewest = day.date == newest,
@@ -239,6 +251,11 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
                             onDelete = { viewModel.deleteDay(day.date) },
                             modifier = Modifier.animateItem().contentWidth().padding(bottom = 8.dp),
                         )
+                    }
+                    if (!showAllDays && data.days.size > VISIBLE_DAYS) {
+                        item(key = "show-all") {
+                            ShowMoreButton("Alle ${data.days.size} Tage anzeigen ▾", onClick = { showAllDays = true }, modifier = Modifier.contentWidth())
+                        }
                     }
                 }
                 else -> items(data.weeks.asReversed(), key = { "week-${it.week.key}" }) { week ->
@@ -265,6 +282,12 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
         }
     }
 
+    viewModel.timePromptDate?.let { date ->
+        TimeDialog(date, onConfirm = viewModel::confirmTime, onDismiss = viewModel::dismissTimePrompt)
+    }
+    openMonth?.let { month ->
+        MonthSheet(Stats.monthDetail(data.days, YearMonth.parse(month)), onDismiss = { openMonth = null })
+    }
     viewModel.importPreview?.let { preview ->
         ImportDialog(preview, onConfirm = viewModel::confirmImport, onDismiss = viewModel::dismissImport)
     }
@@ -276,23 +299,54 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
     }
 }
 
+private const val VISIBLE_DAYS = 10
+
+/**
+ * Fixed top bar (`#sticky-hdr`): app name, credit line and color dots. The status bar area above
+ * it stays opaque so scrolled content does not run under the clock and icons.
+ */
 @Composable
-private fun Header(selected: AccentColor, onSelect: (AccentColor) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.padding(bottom = 20.dp)) {
+private fun StickyHeader(selected: AccentColor, onSelect: (AccentColor) -> Unit) {
+    Column {
+        Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(Palette.Background))
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .background(Palette.Background.copy(alpha = 0xF5 / 255f))
+                .drawBehind { drawLine(Palette.WeekHeader, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Pull-ups", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Palette.White)
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text("KLIMMZUG TRACKER", fontSize = 10.sp, lineHeight = 10.sp, letterSpacing = 3.sp, color = Palette.Muted)
+                Text("Pull-Hard by Bernhard", fontSize = 9.sp, letterSpacing = 2.sp, color = Color(0xFF2E2E3A))
+            }
             Row {
                 for (color in AccentColor.entries) {
                     ColorDot(color, selected = color == selected, onClick = { onSelect(color) })
                 }
             }
         }
-        Text("KLIMMZUG TRACKER", modifier = Modifier.padding(bottom = 6.dp), fontSize = 11.sp, letterSpacing = 3.sp, color = Palette.Muted)
-        Text("Pull-Hard by Bernhard", fontSize = 12.sp, letterSpacing = 2.sp, color = Palette.Muted)
+    }
+}
+
+/** "Alle N Tage anzeigen" (`.show-more-btn`): border and text turn accent while pressed. */
+@Composable
+private fun ShowMoreButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .card(12.dp, border = if (pressed) accent.main else Palette.Border)
+            .plainClickable(interaction, onClick = onClick)
+            .padding(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (pressed) accent.main else Palette.Muted)
     }
 }
 

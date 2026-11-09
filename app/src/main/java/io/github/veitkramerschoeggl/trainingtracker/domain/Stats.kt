@@ -24,12 +24,26 @@ data class TrainingStats(
     /** Newest month first. */
     val months: List<MonthTotal>,
     val top3: List<TrainingDay>,
+    val milestones: MilestoneProgress,
+)
+
+/** Statistics of one month for the detail sheet. */
+data class MonthDetail(
+    val month: YearMonth,
+    val total: Int,
+    val trainingDays: Int,
+    val averagePerDay: Int,
+    val best: Int,
+    val sets: Int,
+    val averagePerSet: Int,
+    /** Newest first. */
+    val days: List<TrainingDay>,
 )
 
 enum class ChartRange { ALL, THREE_MONTHS, ONE_MONTH, TWO_WEEKS }
 
 /**
- * Statistics exactly as the HTML prototype (klimmzug-tracker-7.html) computes them — averages are
+ * Statistics exactly as the HTML prototype (klimmzug-tracker-v11.html) computes them — averages are
  * rounded like JavaScript's Math.round and ties keep the earliest entry.
  */
 object Stats {
@@ -84,8 +98,38 @@ object Stats {
                 .map { (month, monthDays) -> MonthTotal(month, monthDays.sumOf { it.total }) }
                 .sortedByDescending { it.month },
             top3 = days.sortedByDescending { it.total }.take(3),
+            milestones = Milestones.compute(days, today),
         )
     }
+
+    fun monthDetail(days: List<TrainingDay>, month: YearMonth): MonthDetail {
+        val inMonth = days.filter { YearMonth.from(it.date) == month }
+        val total = inMonth.sumOf { it.total }
+        val setCount = inMonth.sumOf { it.sets.size }
+        return MonthDetail(
+            month = month,
+            total = total,
+            trainingDays = inMonth.size,
+            averagePerDay = average(total, inMonth.size),
+            best = inMonth.maxOfOrNull { it.total } ?: 0,
+            sets = setCount,
+            averagePerSet = average(total, setCount),
+            days = inMonth.asReversed(),
+        )
+    }
+
+    /**
+     * Centered moving average shown in the day chart ("Ø 10 Tage (gleitend)"): each value is
+     * averaged with its four neighbours on either side, fewer at the edges.
+     */
+    fun movingAverage(values: List<Int>): List<Double> =
+        values.indices.map { i ->
+            val window = values.subList(maxOf(0, i - 4), minOf(values.size - 1, i + 4) + 1)
+            window.sum().toDouble() / window.size
+        }
+
+    /** The prototype draws the average only for daily values and from five points on. */
+    const val MOVING_AVERAGE_MIN_POINTS = 5
 
     /** Values for the history chart: per day on the "Tage" tab, per week on the "Wochen" tab. */
     fun chartValues(

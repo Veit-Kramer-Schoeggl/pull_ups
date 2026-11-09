@@ -19,18 +19,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import java.time.YearMonth
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.veitkramerschoeggl.trainingtracker.domain.GermanFormat
+import io.github.veitkramerschoeggl.trainingtracker.domain.MilestoneProgress
+import io.github.veitkramerschoeggl.trainingtracker.domain.Milestones
 import io.github.veitkramerschoeggl.trainingtracker.domain.MonthTotal
 import io.github.veitkramerschoeggl.trainingtracker.domain.TrainingDay
 import io.github.veitkramerschoeggl.trainingtracker.domain.TrainingStats
@@ -39,7 +49,13 @@ import io.github.veitkramerschoeggl.trainingtracker.ui.theme.Palette
 
 /** Four pinned KPIs, "Mehr Statistiken" toggle and the expandable details. */
 @Composable
-fun StatsSection(stats: TrainingStats, expanded: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+fun StatsSection(
+    stats: TrainingStats,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onMonthClick: (YearMonth) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier) {
         StatRow(spacing = 8) {
             StatBox("Gesamt", GermanFormat.number(stats.total), accentBorder = true)
@@ -53,14 +69,14 @@ fun StatsSection(stats: TrainingStats, expanded: Boolean, onToggle: () -> Unit, 
             enter = expandVertically(tween(350)) + fadeIn(tween(250)),
             exit = shrinkVertically(tween(350)) + fadeOut(tween(250)),
         ) {
-            StatDetails(stats)
+            StatDetails(stats, onMonthClick)
         }
         Box(Modifier.height(14.dp))
     }
 }
 
 @Composable
-private fun StatDetails(stats: TrainingStats) {
+private fun StatDetails(stats: TrainingStats, onMonthClick: (YearMonth) -> Unit) {
     val streak = stats.longestStreak
     val streakRange = when {
         streak == null -> null
@@ -84,7 +100,8 @@ private fun StatDetails(stats: TrainingStats) {
             StatBox("Ø / Woche", stats.averageLast4Weeks.toString(), sub = "letzte 4 Wochen")
             StatBox("Ø / Satz (30 Tage)", stats.averagePerSetLast30Days.toString())
         }
-        MonthList(stats.months)
+        MilestoneBox(stats.milestones)
+        MonthList(stats.months, onMonthClick)
         TopDays(stats.top3)
     }
 }
@@ -143,13 +160,16 @@ private fun ToggleButton(expanded: Boolean, onToggle: () -> Unit, modifier: Modi
 }
 
 @Composable
-private fun MonthList(months: List<MonthTotal>) {
+private fun MonthList(months: List<MonthTotal>, onMonthClick: (YearMonth) -> Unit) {
     val accent = LocalAccent.current
     val max = months.maxOfOrNull { it.total }?.coerceAtLeast(1) ?: 1
     Column(Modifier.fillMaxWidth().card(14.dp).padding(horizontal = 14.dp, vertical = 12.dp)) {
         BoxTitle("KLIMMZÜGE PRO MONAT")
         for (month in months) {
-            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).plainClickable { onMonthClick(month.month) }.padding(vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(GermanFormat.month(month.month), fontSize = 13.sp, color = Palette.Soft)
                 Box(
                     Modifier
@@ -163,6 +183,7 @@ private fun MonthList(months: List<MonthTotal>) {
                     Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(accent.dim))
                 }
                 Text(month.total.toString(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = accent.main)
+                Text("›", modifier = Modifier.padding(start = 4.dp), fontSize = 12.sp, color = Palette.Faint)
             }
         }
     }
@@ -192,4 +213,67 @@ private fun TopDays(days: List<TrainingDay>) {
 @Composable
 private fun BoxTitle(text: String) {
     Text(text, modifier = Modifier.padding(bottom = 8.dp), fontSize = 10.sp, letterSpacing = 0.5.sp, color = Palette.Muted)
+}
+
+private val MilestoneDivider = Color(0xFF22222C)
+
+/** "MEILENSTEINE": every reached 1000 reps, newest first, and the progress to the next one. */
+@Composable
+private fun MilestoneBox(progress: MilestoneProgress) {
+    val accent = LocalAccent.current
+    Column(Modifier.fillMaxWidth().card(14.dp).padding(horizontal = 14.dp, vertical = 12.dp)) {
+        BoxTitle("MEILENSTEINE")
+        for (milestone in progress.reached) {
+            Row(
+                modifier = Modifier.fillMaxWidth().drawBehind {
+                    drawLine(MilestoneDivider, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                }.padding(vertical = 7.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    GermanFormat.number(milestone.value),
+                    modifier = Modifier
+                        .widthIn(min = 52.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accent.main)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Palette.Background,
+                    textAlign = TextAlign.Center,
+                )
+                Column(Modifier.weight(1f)) {
+                    Text("in ${milestone.sinceStart} erreicht", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Palette.DayText)
+                    val sinceLast = milestone.daysSincePrevious?.let {
+                        " · +$it Tage seit ${GermanFormat.number(milestone.value - Milestones.STEP)}"
+                    }.orEmpty()
+                    Text("am ${GermanFormat.date(milestone.date)}$sinceLast", modifier = Modifier.padding(top = 2.dp), fontSize = 10.sp, color = Palette.Muted)
+                }
+            }
+        }
+        Column(Modifier.padding(top = 10.dp)) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                Text(
+                    buildAnnotatedString {
+                        append("Nächster Meilenstein: ")
+                        withStyle(SpanStyle(color = accent.main, fontSize = 14.sp, fontWeight = FontWeight.Bold)) {
+                            append(GermanFormat.number(progress.next))
+                        }
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Palette.Soft,
+                )
+                Text("noch ${GermanFormat.number(progress.remaining)}", fontSize = 11.sp, color = Palette.Muted)
+            }
+            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Palette.Border)) {
+                Box(Modifier.fillMaxWidth(progress.percent / 100f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(accent.main))
+            }
+            val eta = progress.forecast?.let {
+                "Bei aktuellem Tempo (Ø ${Milestones.oneDecimal(progress.ratePerDay)}/Tag, letzte 28 Tage) ca. am ${GermanFormat.date(it)}"
+            } ?: "Keine Einträge in den letzten 28 Tagen – keine Prognose möglich"
+            Text("${progress.percent} % · $eta", modifier = Modifier.padding(top = 6.dp), fontSize = 10.sp, color = Palette.Muted)
+        }
+    }
 }

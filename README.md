@@ -1,13 +1,14 @@
 # Pull-ups – Klimmzug Tracker (Android)
 
 Android-App zum Erfassen von Klimmzügen mit Auswertung. Design und Verhalten folgen dem
-HTML-Prototyp `klimmzug-tracker-9.html` (externe Vorgabe, liegt nicht im Repo).
+HTML-Prototyp `klimmzug-tracker-v11.html` (externe Vorgabe, liegt nicht im Repo).
 
 ## Funktionen
 
-- Sätze eintragen (Datum, Wiederholungen, Notiz); Tage bearbeiten und löschen (mit „Rückgängig“)
+- Sätze eintragen (Datum, Wiederholungen, Notiz); für heute wird die aktuelle Uhrzeit gespeichert, bei einem anderen Tag fragt die App die Uhrzeit ab; Tage bearbeiten und löschen (mit „Rückgängig“)
 - Statistiken wie im Prototyp: Gesamt, Bestleistung, Ø/Woche, Ø/Tag, Streaks, Pausen, Monate, Top 3
-- Verlauf als Balken- oder Liniendiagramm (Alle / 3M / 1M / 2W), Tages- und Wochenansicht
+- Meilensteine alle 1000 Wiederholungen mit Fortschritt und Prognose; Monats-Details per Tipp auf einen Monat
+- Verlauf als Balken- oder Liniendiagramm (Alle / 3M / 1M / 2W), Tages- und Wochenansicht, gleitender 10-Tage-Durchschnitt, Tageliste mit „Alle anzeigen“
 - Excel-Export (Blätter „Tage“, „Wochen“ und „Sätze“) und Excel-Import (auch Exporte des Prototyps)
 - Drei Farbthemen
 - Selbst-Update über GitHub Releases, ohne Play Store
@@ -167,3 +168,8 @@ python3 -m http.server 8765
 
 App-Icon: 💪 aus Noto Color Emoji (SIL Open Font License 1.1). Kalender-Symbol: Material Icons
 (Apache License 2.0).
+
+## Lizenz
+
+Alle Rechte vorbehalten – das Projekt gehört Bernhard und darf ohne seine schriftliche Zustimmung nicht
+vervielfältigt, verbreitet oder verwendet werden. Details in [LICENSE](LICENSE).

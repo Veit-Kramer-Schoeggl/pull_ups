@@ -92,4 +92,56 @@ class StatsTest {
         val day = Stats.days(sets("2026-09-01" to listOf(10, 5, 8))).single()
         assertEquals("10 + 5 + 8 Sätze", GermanFormat.sets(day))
     }
+
+    @Test
+    fun milestonesEveryThousandReps() {
+        val days = Stats.days(sets("2026-06-01" to listOf(600), "2026-06-10" to listOf(450), "2026-07-02" to listOf(1100)))
+        val progress = Milestones.compute(days, today)
+        assertEquals(listOf(2000, 1000), progress.reached.map { it.value })
+        assertEquals(LocalDate.of(2026, 7, 2), progress.reached[0].date) // 2150 passes 2000 on that day
+        assertEquals("1 Monat und 1 Tag", progress.reached[0].sinceStart)
+        assertEquals(22, progress.reached[0].daysSincePrevious)
+        assertEquals(null, progress.reached[1].daysSincePrevious)
+        assertEquals(3000, progress.next)
+        assertEquals(850, progress.remaining)
+        assertEquals(15, progress.percent)
+        assertNull(progress.forecast) // nothing in the last 28 days
+    }
+
+    @Test
+    fun milestoneDurationOverflowsLikeJavaScript() {
+        // Values computed by the prototype's own fmtDur (setMonth overflow: 31 Jan + 1 month = 3 Mar).
+        assertEquals("1 Monat und -2 Tagen", Milestones.duration(LocalDate.of(2026, 1, 31), LocalDate.of(2026, 3, 1)))
+        assertEquals("2 Monaten und 0 Tagen", Milestones.duration(LocalDate.of(2026, 1, 31), LocalDate.of(2026, 3, 31)))
+        assertEquals("1 Monat und 28 Tagen", Milestones.duration(LocalDate.of(2025, 12, 31), LocalDate.of(2026, 2, 28)))
+        assertEquals("0 Tagen", Milestones.duration(LocalDate.of(2026, 6, 22), LocalDate.of(2026, 6, 22)))
+    }
+
+    @Test
+    fun oneDecimalRoundsLikeToFixed() {
+        assertEquals("7,5", Milestones.oneDecimal(7.45))
+        assertEquals("21,4", Milestones.oneDecimal(21.392857142857142))
+    }
+
+    @Test
+    fun movingAverageUsesNineValueWindow() {
+        val values = (1..12).toList()
+        val average = Stats.movingAverage(values)
+        assertEquals(3.0, average[0], 1e-9)   // 1..5
+        assertEquals(7.0, average[6], 1e-9)   // 3..11
+        assertEquals(10.0, average[11], 1e-9) // 8..12
+    }
+
+    @Test
+    fun monthDetailCountsSetsAndDays() {
+        val days = Stats.days(sets("2026-08-31" to listOf(50), "2026-09-01" to listOf(5, 6), "2026-09-05" to listOf(10)))
+        val detail = Stats.monthDetail(days, YearMonth.of(2026, 9))
+        assertEquals(21, detail.total)
+        assertEquals(2, detail.trainingDays)
+        assertEquals(11, detail.averagePerDay) // 10.5 -> 11
+        assertEquals(11, detail.best)
+        assertEquals(3, detail.sets)
+        assertEquals(7, detail.averagePerSet)
+        assertEquals(listOf(LocalDate.of(2026, 9, 5), LocalDate.of(2026, 9, 1)), detail.days.map { it.date })
+    }
 }

@@ -11,6 +11,8 @@ object GermanFormat {
     private val weekdaysShort = listOf("Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So.")
     private val weekdaysLong =
         listOf("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+    private val monthsLong =
+        listOf("Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember")
     private val monthsShort =
         listOf("Jän.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez.")
 
@@ -30,6 +32,9 @@ object GermanFormat {
 
     /** "Jän. 2026" */
     fun month(month: YearMonth): String = "${monthsShort[month.monthValue - 1]} ${month.year}"
+
+    /** "Jänner 2026" */
+    fun monthLong(month: YearMonth): String = "${monthsLong[month.monthValue - 1]} ${month.year}"
 
     /** "KW 39/2026" */
     fun weekTitle(week: IsoWeek): String = "KW ${week.week}/${week.year}"

@@ -9,7 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Compares the app's statistics with what the HTML prototype (klimmzug-tracker-9.html) renders
+ * Compares the app's statistics with what the HTML prototype (klimmzug-tracker-v11.html) renders
  * for the same data. `prototype-golden.json` is produced by tools/prototype-golden.js, which runs
  * the prototype's own JavaScript on a synthetic dataset (444 sets across a year boundary, pauses,
  * streaks, ties).
@@ -106,6 +106,61 @@ class PrototypeParityTest {
             expectedWeeks,
             weeks.asReversed().map { Triple(GermanFormat.weekLabel(it.week), it.total, it.week == stats.bestWeek?.week) },
         )
+    }
+
+    @Test
+    fun milestones() {
+        val expectedMilestones = expected.getJSONObject("milestones")
+        val reached = expectedMilestones.getJSONArray("reached").objects { _, row -> (row as JSONArray).let { Triple(it.getString(0), it.getString(1), it.getString(2)) } }
+        val progress = stats.milestones
+        assertEquals(
+            reached,
+            progress.reached.map {
+                val sinceLast = it.daysSincePrevious?.let { d -> " · +$d Tage seit ${GermanFormat.number(it.value - Milestones.STEP)}" }.orEmpty()
+                Triple(GermanFormat.number(it.value), "in ${it.sinceStart} erreicht", "am ${GermanFormat.date(it.date)}$sinceLast")
+            },
+        )
+        val next = expectedMilestones.getJSONArray("next")
+        assertEquals(next.getString(0), GermanFormat.number(progress.next))
+        assertEquals(next.getString(1), "noch ${GermanFormat.number(progress.remaining)}")
+        assertEquals(next.getInt(2), progress.percent)
+        val eta = "Bei aktuellem Tempo (Ø ${Milestones.oneDecimal(progress.ratePerDay)}/Tag, letzte 28 Tage) ca. am ${GermanFormat.date(progress.forecast!!)}"
+        assertEquals(next.getString(3), "${progress.percent} % · $eta")
+    }
+
+    @Test
+    fun monthSheets() {
+        val sheets = expected.getJSONObject("monthSheets")
+        val keys = sheets.keys().asSequence().toList()
+        assertEquals(stats.months.size, keys.size)
+        for (key in keys) {
+            val sheet = sheets.getJSONObject(key)
+            val detail = Stats.monthDetail(days, java.time.YearMonth.parse(key))
+            assertEquals(sheet.getString("title"), GermanFormat.monthLong(detail.month))
+            assertEquals(
+                sheet.getJSONArray("stats").objects { _, v -> v as String },
+                listOf(detail.total, detail.trainingDays, detail.averagePerDay, detail.best, detail.sets, detail.averagePerSet).map { it.toString() },
+            )
+            assertEquals(
+                sheet.getJSONArray("days").objects { _, row -> (row as JSONArray).let { Triple(it.getInt(0), it.getString(1), it.getString(2)) } },
+                detail.days.map { day ->
+                    val notes = day.notes
+                    Triple(day.total, GermanFormat.dayLabel(day.date), GermanFormat.sets(day) + if (notes.isNotEmpty()) " · " + notes.joinToString(" · ") else "")
+                },
+            )
+        }
+    }
+
+    @Test
+    fun movingAverageLine() {
+        val average = expected.getJSONObject("average")
+        assertEquals("flex", average.getString("legend")) // shown for the day chart with enough data
+        val values = days.map { it.total }
+        val maxValue = average.getInt("maxValue")
+        assertEquals(values.max(), maxValue)
+        // The prototype's canvas y coordinates (height 100): H - 4 - round(avg / max * (H - 12)).
+        val ys = Stats.movingAverage(values).map { 100 - 4 - Math.round(it / maxValue * (100 - 12)).toInt() }
+        assertEquals(average.getJSONArray("ys").objects { _, v -> (v as Number).toInt() }, ys)
     }
 
     private fun <T> JSONArray.objects(transform: (Int, Any) -> T): List<T> = (0 until length()).map { transform(it, get(it)) }

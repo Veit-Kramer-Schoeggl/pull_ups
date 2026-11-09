@@ -1,10 +1,11 @@
 // Runs the prototype's own JavaScript (with a stubbed DOM and a fixed "today") on a synthetic
 // dataset and prints what it renders — the expected values for PrototypeParityTest.
 // Regenerate after a new design version of the prototype:
-//   node tools/prototype-golden.js ~/Downloads/klimmzug-tracker-9.html > app/src/test/resources/prototype-golden.json
+//   node tools/prototype-golden.js ~/Downloads/klimmzug-tracker-v11.html > app/src/test/resources/prototype-golden.json
 const fs = require('fs');
 const html = fs.readFileSync(process.argv[2], 'utf8');
-const script = html.split('<script>')[1].split('</script>')[0];
+// Show every day in the list (the prototype shows only 10 until "Alle anzeigen" is tapped).
+const script = html.split('<script>')[1].split('</script>')[0].replace('let showAllDays = false;', 'var showAllDays = true;');
 
 const TODAY = '2026-09-28';
 const RealDate = Date;
@@ -52,10 +53,12 @@ const el = id => elements[id] ??= {
   id, textContent: '', innerHTML: '', value: '', disabled: false, dataset: {}, style: {}, offsetWidth: 400,
   classList: { toggle() {}, add() {}, remove() {}, contains() { return false; } },
   addEventListener() {}, querySelector() { return null; },
-  getContext() { return new Proxy({}, { get: () => () => {} }); },
+  getContext() { return new Proxy({}, { get: (_, name) => (...args) => { canvasOps.push({ name, args }); } }); },
 };
-const store = { 'pullup-days-v4': JSON.stringify(days) };
-globalThis.document = { getElementById: el, querySelectorAll: () => [], documentElement: { dataset: {} } };
+const canvasOps = [];
+// 'pullup-seed-version' set: the prototype must not merge its own seed data into the synthetic set.
+const store = { 'pullup-days-v4': JSON.stringify(days), 'pullup-seed-version': '2026-11-07' };
+globalThis.document = { body: { style: {} }, getElementById: el, querySelectorAll: () => [], documentElement: { dataset: {} } };
 globalThis.window = { addEventListener() {}, scrollTo() {}, location: { href: '' }, devicePixelRatio: 1 };
 globalThis.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
 globalThis.setTimeout = () => 0;
@@ -80,9 +83,38 @@ const dayItems = el('days-list').innerHTML.split('<div class="day-item').slice(1
   sets: /day-sets">([^<]*)</.exec(chunk)[1],
   notes: (/day-note">([^<]*)</.exec(chunk) || [null, ''])[1],
 }));
+
+// Chart on the day tab: the dashed moving-average path is the one stroked after setLineDash([3,3]).
+(0, eval)('renderChart()');
+const dash = canvasOps.map(o => o.name + JSON.stringify(o.args)).lastIndexOf('setLineDash[[3,3]]');
+const average = { legend: el('chart-legend').style.display, ys: [], xs: [], maxValue: Math.max(...Object.keys(days).map(k => days[k].sets.reduce((a, x) => a + x.reps, 0))) };
+if (dash >= 0) {
+  let start = dash;
+  while (canvasOps[start].name !== 'beginPath') start--;
+  for (const o of canvasOps.slice(start, dash)) if (o.name === 'moveTo' || o.name === 'lineTo') { average.xs.push(o.args[0]); average.ys.push(o.args[1]); }
+}
+
+// Milestones
+const ms = el('milestone-list').innerHTML;
+const milestones = {
+  reached: all(/ms-badge">([^<]*)<[\s\S]*?ms-main">([^<]*)<[\s\S]*?ms-sub">([^<]*)</g, ms),
+  next: all(/ms-next-title">Nächster Meilenstein: <b>([^<]*)<[\s\S]*?ms-next-rest">([^<]*)<[\s\S]*?width:(\d+)%[\s\S]*?ms-eta">([^<]*)</g, ms)[0],
+};
+
+// Month detail sheet for every month with data
+const monthSheets = {};
+for (const mk of new Set(Object.keys(days).map(k => k.slice(0, 7)))) {
+  (0, eval)(`openMonthSheet('${mk}')`);
+  monthSheets[mk] = {
+    title: text('sheet-month-title'),
+    stats: ['sh-total', 'sh-days', 'sh-avg', 'sh-best', 'sh-sets', 'sh-avgset'].map(id => String(text(id))),
+    days: all(/sdr-reps">(\d+)<[\s\S]*?sdr-date">([^<]*)<[\s\S]*?sdr-sets">([^<]*)</g, el('sh-days-list').innerHTML),
+  };
+}
+
 (0, eval)("switchTab('weeks')");
 const weeks = all(/week-label"(?: style="[^"]*")?>([^<]*)<[\s\S]*?week-total"(?: style="[^"]*")?>(\d+)</g, el('week-view').innerHTML);
 
 const sets = [];
 for (const key of Object.keys(days).sort()) for (const s of days[key].sets) sets.push([key, s.reps, s.note, s.ts]);
-console.log(JSON.stringify({ today: TODAY, sets, expected: { stats, months, top3, days: dayItems, weeks } }, null, 1));
+console.log(JSON.stringify({ today: TODAY, sets, expected: { stats, months, top3, days: dayItems, weeks, average, milestones, monthSheets } }, null, 1));

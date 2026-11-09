@@ -1,7 +1,15 @@
 package io.github.veitkramerschoeggl.trainingtracker.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.PathEffect
+import io.github.veitkramerschoeggl.trainingtracker.domain.Stats
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,9 +65,29 @@ fun HistoryChart(
             },
             modifier = Modifier.padding(bottom = 12.dp),
         )
+        val average = if (!perWeek && values.size >= Stats.MOVING_AVERAGE_MIN_POINTS) Stats.movingAverage(values) else null
         Canvas(Modifier.fillMaxWidth().height(100.dp)) {
             if (type == ChartType.BAR) drawBars(values, accent.main) else drawLine(values, accent.main)
+            if (average != null) drawMovingAverage(values, average)
         }
+        if (average != null) Legend(Modifier.padding(top = 6.dp))
+    }
+}
+
+@Composable
+private fun Legend(modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        LegendEntry(accent.main, "Tageswert")
+        LegendEntry(Color.White.copy(alpha = 0x55 / 255f), "Ø 10 Tage (gleitend)")
+    }
+}
+
+@Composable
+private fun LegendEntry(dot: Color, label: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+        Text(label, fontSize = 9.sp, color = Palette.Muted)
     }
 }
 
@@ -108,6 +136,26 @@ private fun ChartButton(text: String, active: Boolean, onClick: () -> Unit) {
         fontSize = 10.sp,
         fontWeight = FontWeight.SemiBold,
         color = if (active) Palette.Background else Palette.Muted,
+    )
+}
+
+/** Dashed white line of the moving average, scaled like the bars and the line chart. */
+private fun DrawScope.drawMovingAverage(values: List<Int>, average: List<Double>) {
+    val maxValue = max(values.max(), 1)
+    val pad = chartPadding.toPx()
+    val baseline = size.height - 4.dp.toPx()
+    val usable = size.height - 12.dp.toPx()
+    val columnWidth = (size.width - pad * 2) / values.size
+    val path = Path()
+    average.forEachIndexed { i, value ->
+        val x = pad + i * columnWidth + columnWidth / 2
+        val y = baseline - (value / maxValue * usable).roundToInt()
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    drawPath(
+        path,
+        Color.White.copy(alpha = 0x66 / 255f),
+        style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))),
     )
 }
 

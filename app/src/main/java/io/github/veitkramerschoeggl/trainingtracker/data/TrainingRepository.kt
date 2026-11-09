@@ -6,6 +6,7 @@ import io.github.veitkramerschoeggl.trainingtracker.data.db.TrainingDatabase.Com
 import io.github.veitkramerschoeggl.trainingtracker.domain.TrainingSet
 import io.github.veitkramerschoeggl.trainingtracker.excel.ImportedSet
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,8 +31,13 @@ class TrainingRepository(
 
     suspend fun allSets(): List<TrainingSet> = dao.getAll(exerciseId).map { it.toModel() }
 
-    suspend fun addSet(date: LocalDate, reps: Int, note: String) {
-        dao.insert(SetEntity(exerciseId = exerciseId, date = date, reps = reps, note = note.trim(), createdAt = now()))
+    /**
+     * Adds a set. Without [time] the recording time is the device's current time; with it (entries
+     * for another day than today) the set is recorded at that time of [date].
+     */
+    suspend fun addSet(date: LocalDate, reps: Int, note: String, time: LocalTime? = null) {
+        val createdAt = time?.let { date.atTime(it).atZone(zone()).toInstant().toEpochMilli() } ?: now()
+        dao.insert(SetEntity(exerciseId = exerciseId, date = date, reps = reps, note = note.trim(), createdAt = createdAt))
     }
 
     /** Edit of a day (as in the prototype): its sets are replaced by one set with the new total. */

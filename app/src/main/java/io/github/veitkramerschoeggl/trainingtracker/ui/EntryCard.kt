@@ -9,7 +9,11 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -82,45 +86,46 @@ fun EntryCard(
         onSubmit()
     }
 
-    Column(modifier.card(18.dp).padding(horizontal = 20.dp, vertical = 22.dp)) {
+    Column(modifier.card(18.dp).padding(horizontal = 14.dp, vertical = 12.dp)) {
         Text(
             if (editing) "Tag bearbeiten" else "Training eintragen",
-            modifier = Modifier.padding(bottom = 14.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
             fontSize = 12.sp,
             letterSpacing = 0.5.sp,
             color = Palette.Muted,
         )
-        Text("Datum", modifier = Modifier.padding(bottom = 6.dp), fontSize = 11.sp, color = Palette.Muted)
-        DateField(form.date, onClick = { showDatePicker = true }, Modifier.padding(bottom = 14.dp))
         if (existingTotal != null) ExistingHint(existingTotal, Modifier.padding(bottom = 14.dp))
         Row(
-            modifier = Modifier.padding(bottom = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            DateField(form.date, onClick = { showDatePicker = true }, Modifier.weight(1f))
             StepperButton("−", "Weniger") { onStep(-1) }
-            RepsField(form.reps, onRepsChange, onDone = submit, Modifier.weight(1f))
+            RepsField(form.reps, onRepsChange, onDone = submit, Modifier.width(72.dp))
             StepperButton("+", "Mehr") { onStep(1) }
         }
-        NoteField(form.note, onNoteChange, onDone = submit, Modifier.padding(bottom = 14.dp))
-        SubmitButton(
-            text = saveFeedback ?: if (editing) "Änderung speichern" else "Eintragen",
-            enabled = (form.reps.toIntOrNull() ?: 0) >= 1,
-            saved = saveFeedback != null,
-            onClick = submit,
-        )
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NoteField(form.note, onNoteChange, onDone = submit, Modifier.weight(1f).fillMaxHeight())
+            SubmitButton(
+                text = saveFeedback ?: if (editing) "Änderung speichern" else "Eintragen",
+                enabled = (form.reps.toIntOrNull() ?: 0) >= 1,
+                saved = saveFeedback != null,
+                onClick = submit,
+            )
+        }
         if (editing) {
             Box(
                 modifier = Modifier
-                    .padding(top = 8.dp)
+                    .padding(top = 6.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, Palette.Border, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.dp, Palette.Border, RoundedCornerShape(10.dp))
                     .plainClickable(onClick = onCancelEdit)
-                    .padding(12.dp),
+                    .padding(7.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Bearbeitung abbrechen", fontSize = 13.sp, color = Palette.Subtle)
+                Text("Bearbeitung abbrechen", fontSize = 12.sp, color = Palette.Subtle)
             }
         }
     }
@@ -144,14 +149,14 @@ private fun DateField(date: LocalDate, onClick: () -> Unit, modifier: Modifier =
             .fillMaxWidth()
             .card(10.dp, background = Palette.Background)
             .plainClickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(GermanFormat.date(date), modifier = Modifier.weight(1f), fontSize = 15.sp, color = Palette.Text)
+        Text(GermanFormat.date(date), modifier = Modifier.weight(1f), fontSize = 13.sp, maxLines = 1, color = Palette.Text)
         Icon(
             painterResource(R.drawable.ic_calendar),
             contentDescription = "Datum wählen",
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(16.dp),
             tint = Palette.White,
         )
     }
@@ -165,7 +170,7 @@ private fun ExistingHint(total: Int, modifier: Modifier = Modifier) {
         buildAnnotatedString {
             append("An diesem Tag bereits ")
             withStyle(bold) { append(total.toString()) }
-            append(" Klimmzüge — Wert wird ")
+            append(" Klimmzüge — wird ")
             withStyle(bold) { append("addiert") }
             append(".")
         },
@@ -184,13 +189,13 @@ private fun StepperButton(symbol: String, description: String, onClick: () -> Un
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier = Modifier
-            .size(width = 44.dp, height = 56.dp)
+            .size(width = 36.dp, height = 40.dp)
             .card(10.dp, background = if (pressed) Palette.ControlPressed else Palette.Control)
             .plainClickable(interaction, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Text(symbol, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Palette.Text)
+        Text(symbol, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Palette.Text)
     }
 }
 
@@ -199,7 +204,7 @@ private fun RepsField(value: String, onValueChange: (String) -> Unit, onDone: ()
     val accent = LocalAccent.current
     val style = TextStyle(
         color = accent.main,
-        fontSize = 36.sp,
+        fontSize = 28.sp,
         fontWeight = FontWeight.ExtraBold,
         textAlign = TextAlign.Center,
     )
@@ -207,10 +212,10 @@ private fun RepsField(value: String, onValueChange: (String) -> Unit, onDone: ()
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(Palette.Background)
-            .border(2.dp, accent.main, RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 10.dp),
+            .border(2.dp, accent.main, RoundedCornerShape(10.dp))
+            .padding(4.dp),
         textStyle = style,
         singleLine = true,
         cursorBrush = SolidColor(accent.main),
@@ -229,14 +234,13 @@ private fun RepsField(value: String, onValueChange: (String) -> Unit, onDone: ()
 @Composable
 private fun NoteField(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current
-    val style = TextStyle(color = Palette.Text, fontSize = 14.sp)
+    val style = TextStyle(color = Palette.Text, fontSize = 13.sp)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
-            .fillMaxWidth()
             .card(10.dp, background = Palette.Background)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 7.dp),
         textStyle = style,
         singleLine = true,
         cursorBrush = SolidColor(accent.main),
@@ -258,15 +262,15 @@ private fun SubmitButton(text: String, enabled: Boolean, saved: Boolean, onClick
     val content by animateColorAsState(if (saved) accent.main else Palette.Background, tween(300), label = "submitFg")
     Box(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxHeight()
             .alpha(if (enabled) 1f else 0.4f)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(background)
             .plainClickable(enabled = enabled, onClick = onClick)
-            .padding(14.dp),
+            .padding(horizontal = 14.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = content)
+        Text(text, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Bold, color = content)
     }
 }
 

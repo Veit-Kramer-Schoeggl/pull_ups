@@ -29,6 +29,7 @@ import io.github.veitkramerschoeggl.trainingtracker.update.UpdateCheckResult
 import io.github.veitkramerschoeggl.trainingtracker.update.UpdateManager
 import io.github.veitkramerschoeggl.trainingtracker.update.UpdateState
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -170,15 +171,38 @@ class MainViewModel(
         form = EntryForm(date = clock())
     }
 
+    /** Set while the dialog asks for the time of an entry on another day than today. */
+    var timePromptDate by mutableStateOf<LocalDate?>(null)
+        private set
+
     fun submit() {
         val submitted = form
+        if (submitted.reps.toIntOrNull()?.takeIf { it >= 1 } == null) return
+        // Entries for today are recorded with the current time; other days ask for a time first.
+        if (submitted.editing == null && submitted.date != clock()) {
+            timePromptDate = submitted.date
+            return
+        }
+        save(submitted, time = null)
+    }
+
+    fun confirmTime(time: LocalTime) {
+        timePromptDate = null
+        save(form, time)
+    }
+
+    fun dismissTimePrompt() {
+        timePromptDate = null
+    }
+
+    private fun save(submitted: EntryForm, time: LocalTime?) {
         val reps = submitted.reps.toIntOrNull()?.takeIf { it >= 1 } ?: return
         form = EntryForm(date = clock())
         viewModelScope.launch {
             if (submitted.editing != null) {
                 repository.replaceDay(submitted.editing, submitted.date, reps, submitted.note)
             } else {
-                repository.addSet(submitted.date, reps, submitted.note)
+                repository.addSet(submitted.date, reps, submitted.note, time)
             }
             showSaveFeedback(if (submitted.editing != null) "✓ Gespeichert" else "✓ Hinzugefügt")
         }
