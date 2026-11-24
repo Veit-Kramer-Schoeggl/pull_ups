@@ -65,6 +65,10 @@ import io.github.veitkramerschoeggl.trainingtracker.data.AccentColor
 import io.github.veitkramerschoeggl.trainingtracker.domain.ChartRange
 import io.github.veitkramerschoeggl.trainingtracker.domain.Stats
 import io.github.veitkramerschoeggl.trainingtracker.excel.ExcelExport
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import io.github.veitkramerschoeggl.trainingtracker.domain.GermanFormat
 import io.github.veitkramerschoeggl.trainingtracker.ui.theme.LocalAccent
 import io.github.veitkramerschoeggl.trainingtracker.ui.theme.Palette
 import io.github.veitkramerschoeggl.trainingtracker.ui.theme.TrainingTrackerTheme
@@ -169,7 +173,17 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item(key = "header") {
-                Text("Pull-ups", modifier = Modifier.contentWidth().padding(bottom = 4.dp), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Palette.White)
+                // v12: the total sits in the heading, in the accent color ("1.234 Pull-ups").
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = LocalAccent.current.main)) { append(GermanFormat.number(data.stats.total)) }
+                        append(" Pull-ups")
+                    },
+                    modifier = Modifier.contentWidth().padding(bottom = 4.dp),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Palette.White,
+                )
             }
             if (showUpdate) {
                 item(key = "update") {
@@ -207,14 +221,6 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
                 )
             }
             if (hasData) {
-                item(key = "export") {
-                    OutlineButton(
-                        icon = "📊",
-                        text = "Als Excel exportieren (.xlsx)",
-                        onClick = { exportLauncher.launch(viewModel.exportFileName()) },
-                        modifier = Modifier.contentWidth().padding(bottom = 24.dp),
-                    )
-                }
                 item(key = "tabs") {
                     Tabs(tab, onSelect = { tab = it }, modifier = Modifier.contentWidth().padding(bottom = 20.dp))
                 }
@@ -266,6 +272,16 @@ private fun MainScreen(viewModel: MainViewModel, data: TrainingData, accentColor
                         expanded = key !in closedWeeks,
                         onToggle = { closedWeeks = if (key in closedWeeks) closedWeeks - key else closedWeeks + key },
                         modifier = Modifier.animateItem().contentWidth().padding(bottom = 12.dp),
+                    )
+                }
+            }
+            if (hasData) {
+                item(key = "export") {
+                    OutlineButton(
+                        icon = "📊",
+                        text = "Als Excel exportieren (.xlsx)",
+                        onClick = { exportLauncher.launch(viewModel.exportFileName()) },
+                        modifier = Modifier.contentWidth().padding(top = 24.dp),
                     )
                 }
             }

@@ -2670,8 +2670,7 @@
   "stats": {
    "stat-total": "3 629",
    "stat-max": "62",
-   "stat-week-avg": "91",
-   "stat-avg": "25",
+   "stat-max-set": "60",
    "stat-count": "147",
    "stat-best-week": "209",
    "stat-best-week-sub": "KW 38/2026",
@@ -2679,7 +2678,7 @@
    "stat-streak-sub": "Sa., 12.–Mo., 28.",
    "stat-streak-reps": "374",
    "stat-inactive": "16 Tage",
-   "stat-avg10": "19",
+   "stat-avg14": "21",
    "stat-avg4w": "124",
    "stat-avg-set": "8"
   },

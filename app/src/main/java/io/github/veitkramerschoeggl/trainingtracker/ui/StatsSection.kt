@@ -58,10 +58,10 @@ fun StatsSection(
 ) {
     Column(modifier) {
         StatRow(spacing = 8) {
-            StatBox("Gesamt", GermanFormat.number(stats.total), accentBorder = true)
+            StatBox("Bestleistung", stats.bestSet.toString(), sub = "pro Satz", accentBorder = true)
             StatBox("Bestleistung", stats.best.toString(), sub = "pro Tag")
-            StatBox("Ø / Woche", stats.weekAverage.toString())
-            StatBox("Ø / Tag", stats.dayAverage.toString())
+            StatBox("Ø / Woche", stats.averageLast4Weeks.toString(), sub = "letzte 4 Wochen")
+            StatBox("Ø / Tag", stats.averageLast14Days?.toString() ?: "–", sub = "letzte 14 Tage")
         }
         ToggleButton(expanded, onToggle, Modifier.padding(top = 10.dp, bottom = 10.dp))
         AnimatedVisibility(
@@ -94,10 +94,6 @@ private fun StatDetails(stats: TrainingStats, onMonthClick: (YearMonth) -> Unit)
         }
         StatRow {
             StatBox("Längste Pause", GermanFormat.days(stats.longestPause), sub = "Tage inaktiv")
-            StatBox("Ø / Tag", stats.averageLast10Days.toString(), sub = "letzte 10 Tage")
-        }
-        StatRow {
-            StatBox("Ø / Woche", stats.averageLast4Weeks.toString(), sub = "letzte 4 Wochen")
             StatBox("Ø / Satz (30 Tage)", stats.averagePerSetLast30Days.toString())
         }
         MilestoneBox(stats.milestones)

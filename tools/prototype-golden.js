@@ -1,7 +1,7 @@
 // Runs the prototype's own JavaScript (with a stubbed DOM and a fixed "today") on a synthetic
 // dataset and prints what it renders — the expected values for PrototypeParityTest.
 // Regenerate after a new design version of the prototype:
-//   node tools/prototype-golden.js ~/Downloads/klimmzug-tracker-v11.html > app/src/test/resources/prototype-golden.json
+//   node tools/prototype-golden.js ~/Downloads/klimmzug-tracker-v12.html > app/src/test/resources/prototype-golden.json
 const fs = require('fs');
 const html = fs.readFileSync(process.argv[2], 'utf8');
 // Show every day in the list (the prototype shows only 10 until "Alle anzeigen" is tapped).
@@ -67,8 +67,8 @@ URL.createObjectURL = () => '';
 (0, eval)(script);
 const text = id => el(id).textContent;
 const stats = {};
-for (const id of ['stat-total', 'stat-max', 'stat-week-avg', 'stat-avg', 'stat-count', 'stat-best-week',
-  'stat-best-week-sub', 'stat-streak', 'stat-streak-sub', 'stat-streak-reps', 'stat-inactive', 'stat-avg10',
+for (const id of ['stat-total', 'stat-max', 'stat-max-set', 'stat-count', 'stat-best-week',
+  'stat-best-week-sub', 'stat-streak', 'stat-streak-sub', 'stat-streak-reps', 'stat-inactive', 'stat-avg14',
   'stat-avg4w', 'stat-avg-set']) stats[id] = String(text(id));
 
 const all = (re, s) => [...s.matchAll(re)].map(m => m.slice(1));

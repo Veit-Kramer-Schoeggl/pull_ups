@@ -9,7 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Compares the app's statistics with what the HTML prototype (klimmzug-tracker-v11.html) renders
+ * Compares the app's statistics with what the HTML prototype (klimmzug-tracker-v12.html) renders
  * for the same data. `prototype-golden.json` is produced by tools/prototype-golden.js, which runs
  * the prototype's own JavaScript on a synthetic dataset (444 sets across a year boundary, pauses,
  * streaks, ties).
@@ -38,15 +38,14 @@ class PrototypeParityTest {
         val s = expected.getJSONObject("stats")
         assertEquals(s.getString("stat-total"), GermanFormat.number(stats.total))
         assertEquals(s.getString("stat-max"), stats.best.toString())
-        assertEquals(s.getString("stat-week-avg"), stats.weekAverage.toString())
-        assertEquals(s.getString("stat-avg"), stats.dayAverage.toString())
+        assertEquals(s.getString("stat-max-set"), stats.bestSet.toString())
         assertEquals(s.getString("stat-count"), stats.activeDays.toString())
         assertEquals(s.getString("stat-best-week"), stats.bestWeek!!.total.toString())
         assertEquals(s.getString("stat-best-week-sub"), GermanFormat.weekTitle(stats.bestWeek!!.week))
         assertEquals(s.getString("stat-streak-reps"), stats.longestStreak!!.reps.toString())
         assertEquals(s.getString("stat-streak"), GermanFormat.days(stats.longestStreak!!.days))
         assertEquals(s.getString("stat-inactive"), GermanFormat.days(stats.longestPause))
-        assertEquals(s.getString("stat-avg10"), stats.averageLast10Days.toString())
+        assertEquals(s.getString("stat-avg14"), stats.averageLast14Days?.toString() ?: "–")
         assertEquals(s.getString("stat-avg4w"), stats.averageLast4Weeks.toString())
         assertEquals(s.getString("stat-avg-set"), stats.averagePerSetLast30Days.toString())
     }

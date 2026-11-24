@@ -26,7 +26,9 @@ class StatsTest {
         val stats = compute(emptyList())
         assertEquals(0, stats.total)
         assertEquals(0, stats.best)
-        assertEquals(0, stats.weekAverage)
+        assertEquals(0, stats.bestSet)
+        assertEquals(0, stats.averageLast4Weeks)
+        assertNull(stats.averageLast14Days)
         assertNull(stats.longestStreak)
         assertNull(stats.bestWeek)
         assertEquals(0, stats.longestPause)
@@ -45,6 +47,21 @@ class StatsTest {
         )
         assertEquals(Streak(3, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 3), 20), stats.longestStreak)
         assertEquals(6, stats.longestPause) // 4th to 9th
+    }
+
+    @Test
+    fun bestSetAndAverageOfLast14Days() {
+        val stats = compute(
+            sets(
+                "2026-09-14" to listOf(50), // 15 days ago: outside the window
+                "2026-09-15" to listOf(4, 6), // first day of the window (today - 13)
+                "2026-09-28" to listOf(7),
+                "2026-09-30" to listOf(99), // in the future: ignored like in the prototype
+            ),
+        )
+        assertEquals(99, stats.bestSet)
+        assertEquals(9, stats.averageLast14Days) // (10 + 7) / 2 = 8.5 -> 9
+        assertNull(compute(sets("2026-09-14" to listOf(5))).averageLast14Days)
     }
 
     @Test

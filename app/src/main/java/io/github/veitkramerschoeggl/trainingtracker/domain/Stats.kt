@@ -10,15 +10,17 @@ data class MonthTotal(val month: YearMonth, val total: Int)
 
 data class TrainingStats(
     val total: Int,
+    /** Best day total. */
     val best: Int,
-    val weekAverage: Int,
-    val dayAverage: Int,
+    /** Most reps in a single set. */
+    val bestSet: Int,
     val activeDays: Int,
     val bestWeek: TrainingWeek?,
     val longestStreak: Streak?,
     /** Longest gap between two training days, in days. */
     val longestPause: Int,
-    val averageLast10Days: Int,
+    /** Average per training day in the last 14 calendar days (today included); null without any. */
+    val averageLast14Days: Int?,
     val averageLast4Weeks: Int,
     val averagePerSetLast30Days: Int,
     /** Newest month first. */
@@ -43,7 +45,7 @@ data class MonthDetail(
 enum class ChartRange { ALL, THREE_MONTHS, ONE_MONTH, TWO_WEEKS }
 
 /**
- * Statistics exactly as the HTML prototype (klimmzug-tracker-v11.html) computes them — averages are
+ * Statistics exactly as the HTML prototype (klimmzug-tracker-v12.html) computes them — averages are
  * rounded like JavaScript's Math.round and ties keep the earliest entry.
  */
 object Stats {
@@ -85,13 +87,14 @@ object Stats {
         return TrainingStats(
             total = total,
             best = days.maxOfOrNull { it.total } ?: 0,
-            weekAverage = average(weeks.sumOf { it.total }, weeks.size),
-            dayAverage = average(total, days.size),
+            bestSet = days.maxOfOrNull { day -> day.sets.maxOf { it.reps } } ?: 0,
             activeDays = days.size,
             bestWeek = weeks.firstOrNull { it.total == bestWeekTotal && bestWeekTotal > 0 },
             longestStreak = longest,
             longestPause = longestPause,
-            averageLast10Days = days.takeLast(10).let { average(it.sumOf { d -> d.total }, it.size) },
+            averageLast14Days = days.filter { it.date >= today.minusDays(13) && it.date <= today }
+                .takeIf { it.isNotEmpty() }
+                ?.let { average(it.sumOf { d -> d.total }, it.size) },
             averageLast4Weeks = weeks.takeLast(4).let { average(it.sumOf { w -> w.total }, it.size) },
             averagePerSetLast30Days = average(recentSets.sumOf { it.reps }, recentSets.size),
             months = days.groupBy { YearMonth.from(it.date) }
